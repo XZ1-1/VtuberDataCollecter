@@ -10,3 +10,7 @@
 1. **Clone 專案**：
    ```sh
    git clone https://github.com/XZ1-1/VtuberDataCollecter.git
+
+## 設定 API Key
+- 本專案使用 YouTube API，需要設定 API Key：
+> dotnet user-secrets set "YouTubeApiKey" "your-api-key-here"
