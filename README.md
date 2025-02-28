@@ -1,16 +1,16 @@
 # VtuberDataCollecter
-§Q¥ÎYoutubeAPI¦¬¶°¸ê®Æ¨Ã«Ø¥ß¥iµø¤Æ¼Ò«¬
+åˆ©ç”¨YoutubeAPIæ”¶é›†è³‡æ–™ä¸¦å»ºç«‹å¯è¦–åŒ–æ¨¡å‹
 
-## ¨Ï¥Î§Ş³N (Tech Stack)
-- ¶}µo»y¨¥¡GC# (.NET 8)
-- ¼Æ¾Ú³B²z¡GSQLite
-- µøÄ±¤Æ¡G¹w­p¥Îweb board
+## ä½¿ç”¨æŠ€è¡“ (Tech Stack)
+- é–‹ç™¼èªè¨€ï¼šC# (.NET 8)
+- æ•¸æ“šè™•ç†ï¼šSQLite(å°‡æ”¹æˆMySQL)
+- è¦–è¦ºåŒ–ï¼šé è¨ˆç”¨web board
 
-## ¦w¸Ë»P¨Ï¥Î¤è¦¡ (Installation & Usage)
-1. **Clone ±M®×**¡G
+## å®‰è£èˆ‡ä½¿ç”¨æ–¹å¼ (Installation & Usage)
+1. **Clone å°ˆæ¡ˆ**ï¼š
    ```sh
    git clone https://github.com/XZ1-1/VtuberDataCollecter.git
 
-## ³]©w API Key
-- ¥»±M®×¨Ï¥Î YouTube API¡A»İ­n³]©w API Key¡G
+## è¨­å®š API Key
+- æœ¬å°ˆæ¡ˆä½¿ç”¨ YouTube APIï¼Œéœ€è¦è¨­å®š API Keyï¼š
 > dotnet user-secrets set "YouTubeApiKey" "your-api-key-here"
