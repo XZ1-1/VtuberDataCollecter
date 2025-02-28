@@ -5,12 +5,12 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 
 /*分析影片受歡迎要素*/
 
 class Program
 {
-    static string apiKey = "AIzaSyDC8ZFO38a6PWbU6lDesnTFSNTETv-4bCw";
     static List<string> channelIds = new List<string>
     {
         "UCL_qhgtOy0dy1Agp8vkySQg", // Mori Calliope
@@ -39,6 +39,16 @@ class Program
         }
 
         Console.WriteLine("資料抓取完成！");
+    }
+
+    static string GetAPI()
+    {
+        IConfigurationRoot config = new ConfigurationBuilder()
+                                          .AddUserSecrets<Program>()  // 告訴 .NET 讀取 User Secrets
+                                          .Build();
+
+        string apiKey = config["YouTubeApiKey"] ?? "";  // 取得 API Key
+        return apiKey;
     }
 
     static void CreateDatabase(SqliteConnection connection)
@@ -122,7 +132,7 @@ class Program
             //打開Youtube服務，給API Key
             var youtubeService = new YouTubeService(new BaseClientService.Initializer()
             {
-                ApiKey = apiKey
+                ApiKey = GetAPI()
             });
 
             //<請求>搜尋ChannelId的snippet(搜尋某頻道的影片基本資訊)
