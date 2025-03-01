@@ -364,4 +364,5 @@ FodyWeavers.xsd
 
 # Ignore API Key setting
 appsettings.json
+appsettings.Development.json
 .env
