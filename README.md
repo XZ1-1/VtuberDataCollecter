@@ -5,7 +5,7 @@
 ## 使用技術 (Tech Stack)
 - 開發語言：C# (.NET 8)
 - 數據處理：SQLite(將改成MySQL)
-- 視覺化：預計用web board
+- 視覺化：預計用Web Dashboard
 
 
 ## 安裝與使用方式 (Installation & Usage)
