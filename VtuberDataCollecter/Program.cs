@@ -6,6 +6,10 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using VtuberDataCollecter;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
+using Google.Apis.YouTube.v3.Data;
+using System.Xml;
 
 /*分析影片受歡迎要素*/
 
@@ -27,10 +31,11 @@ class Program
 
     static async Task Main()
     {
-        //連到DB
-        using var connection = new SqliteConnection("Data Source=YouTubeData.db");
-        connection.Open();
-        CreateDatabase(connection);
+        #region 連到SQLiteDB
+        /*連到SQLiteDB
+        //using var connection = new SqliteConnection("Data Source=YouTubeData.db");
+        //connection.Open();
+        //CreateDatabase(connection);
 
         //EN組10個頻道
         foreach (var channelId in channelIds)
@@ -39,6 +44,47 @@ class Program
         }
 
         Console.WriteLine("資料抓取完成！");
+        */
+        #endregion
+
+        //Youtube API撈資料
+
+        //EN組10個頻道
+        
+        foreach (var channelId in channelIds)
+        {
+            await FetchAndStoreVideosAsync(channelId);
+        }
+
+
+        //MySQL
+        using (var db = new YoutubeDB())
+        {
+            try
+            {
+                db.Database.EnsureCreated();  // 確保資料庫存在，不存在就建立
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+            }
+        }
+        using (var db = new YoutubeDB())
+        {
+            try
+            {
+                //db.Videos.Update(new Video { VideoId = "abc123", Title = "My Video", Description = "description", Duration = 3600, PublishedAt = DateTime.UtcNow });
+                //db.SaveChanges();
+
+                //var video = db.Videos.FirstOrDefault(v => v.VideoId == "abc123");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+            }
+        }
+
+
     }
 
     static string GetAPI()
@@ -51,6 +97,102 @@ class Program
         return apiKey;
     }
 
+    /// <summary>MySQL</summary>
+    static async Task FetchAndStoreVideosAsync(string channelId)
+    {
+        try
+        {
+            //打開Youtube服務，給API Key
+            var youtubeService = new YouTubeService(new BaseClientService.Initializer()
+            {
+                ApiKey = GetAPI()
+            });
+
+            // Channel
+            //<請求>搜尋ChannelId的snippet(搜尋某頻道的影片基本資訊)
+            var request =  youtubeService.Search.List("snippet");
+            request.ChannelId = channelId;  //指定特定頻道
+            request.MaxResults = 5; //最多5個
+            request.Order = SearchResource.ListRequest.OrderEnum.Date;  //從最新的開始搜尋
+            request.Type = "video"; //僅搜尋影片，不會有頻道、播放清單等等其他資料
+            var searchResponse = await request.ExecuteAsync();
+
+
+            if (searchResponse.Items.Count == 0)
+            {
+                Console.WriteLine($"找不到頻道 {channelId} 的影片");
+                return;
+            }
+            string channelName = searchResponse.Items[0].Snippet.ChannelTitle;
+            var channelRequest = youtubeService.Channels.List("statistics");
+            channelRequest.Id = channelId;
+            var channelResponse = await channelRequest.ExecuteAsync();
+
+            ulong channelSubscribers = 0, channelTotalViews = 0, channelTotalVideos = 0;
+            if (channelResponse.Items.Count > 0)
+            {
+                var channelStats = channelResponse.Items[0].Statistics;
+                channelSubscribers = channelStats.SubscriberCount.GetValueOrDefault(0);
+                channelTotalViews = channelStats.ViewCount.GetValueOrDefault(0);
+                channelTotalVideos = channelStats.VideoCount.GetValueOrDefault(0);
+            }
+            Console.WriteLine($"channelName:{channelName}");
+            Console.WriteLine($"channelSubscribers:{channelSubscribers}");
+            Console.WriteLine($"channelTotalViews:{channelTotalViews}");
+            Console.WriteLine($"channelTotalVideos:{channelTotalVideos}");
+
+            //搜了5部最新的影片之後
+            foreach (var searchResult in searchResponse.Items)
+            {
+                //video
+                string videoId = searchResult.Id.VideoId;
+
+                //<請求>列出影片基本資訊、內容、統計數據、直播資訊
+                var videoRequest = youtubeService.Videos.List("snippet,contentDetails,statistics,liveStreamingDetails");
+                videoRequest.Id = videoId;  //設定影片ID，有5部
+                var videoResponse = await videoRequest.ExecuteAsync();
+
+                if (videoResponse.Items.Count == 0)
+                    continue;
+
+                var video = videoResponse.Items[0];
+                string title = video.Snippet.Title;
+                string description = video.Snippet.Description;
+                string thumbnailUrl = video.Snippet.Thumbnails.Maxres?.Url ?? 
+                                      video.Snippet.Thumbnails.High?.Url ?? 
+                                      video.Snippet.Thumbnails.Medium?.Url ?? 
+                                      video.Snippet.Thumbnails.Default__.Url;
+                DateTime publishedAt = DateTime.Parse(searchResult.Snippet.PublishedAtRaw);//str"2024-03-02T15:30:00Z" to DateTime
+                //!!!Video_tag 要另外處理
+                string tags = video.Snippet.Tags != null ? string.Join(",", video.Snippet.Tags) : "";
+                //ulong liveMaxConcurrentViewers = video.LiveStreamingDetails?.ConcurrentViewers ?? 0;
+                uint duration = ParseYouTubeDurationToInt(video.ContentDetails.Duration);
+                ulong commentCount = video.Statistics.CommentCount.GetValueOrDefault(0);
+                ulong viewCount = video.Statistics.ViewCount.GetValueOrDefault(0);
+                ulong likeCount = video.Statistics.LikeCount.GetValueOrDefault(0);
+                // 取得 SuperChat 總收入
+                //decimal superChatIncome = await FetchSuperChatIncomeAsync(youtubeService, videoId);
+
+                Console.WriteLine($"videoId:{videoId}");
+                Console.WriteLine($"title:{title}");
+                Console.WriteLine($"description:{description}");
+                Console.WriteLine($"thumbnailUrl:{thumbnailUrl}");
+                Console.WriteLine($"publishedAt:{publishedAt}");
+                Console.WriteLine($"tags:{tags}");
+                //Console.WriteLine($"liveMaxConcurrentViewers:{liveMaxConcurrentViewers}");
+                Console.WriteLine($"duration:{duration}");
+                Console.WriteLine($"commentCount:{commentCount}");
+                Console.WriteLine($"viewCount:{viewCount}");
+                Console.WriteLine($"likeCount:{likeCount}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"FetchAndStoreVideosAsync:{ex.Message}");
+        }
+    }
+
+    /// <summary>SQLite</summary>
     static void CreateDatabase(SqliteConnection connection)
     {
         try
@@ -125,6 +267,7 @@ class Program
         }
     }
 
+    /// <summary>SQLite</summary>
     static async Task FetchAndStoreVideosAsync(string channelId, SqliteConnection connection)
     {
         try
@@ -176,7 +319,7 @@ class Program
                 long likeCount = (long)video.Statistics.LikeCount.GetValueOrDefault(0);
                 long commentCount = (long)video.Statistics.CommentCount.GetValueOrDefault(0);
                 ulong liveMaxConcurrentViewers = video.LiveStreamingDetails?.ConcurrentViewers ?? 0;
-                string duration = ParseYouTubeDuration(video.ContentDetails.Duration);
+                string duration = ParseYouTubeDurationToStr(video.ContentDetails.Duration);
                 // 取得 SuperChat 總收入
                 //decimal superChatIncome = await FetchSuperChatIncomeAsync(youtubeService, videoId);
 
@@ -209,7 +352,7 @@ class Program
     /// <summary>解析影片時長 (ISO 8601 -> HH:mm:ss)</summary>
     /// <param name="duration"></param>
     /// <returns>HH:mm:ss</returns>
-    static string ParseYouTubeDuration(string duration)
+    static string ParseYouTubeDurationToStr(string duration)
     {
         try
         {
@@ -226,6 +369,11 @@ class Program
             return "";
         }
     }
+    public static uint ParseYouTubeDurationToInt(string duration)
+    {
+        return (uint)XmlConvert.ToTimeSpan(duration).TotalSeconds;
+    }
+
     static async Task<decimal> FetchSuperChatIncomeAsync(YouTubeService youtubeService, string videoId)
     {
         try
@@ -262,6 +410,8 @@ class Program
             return 0; // 如果 API 失敗，預設為 0
         }
     }
+
+    /// <summary>SQLite</summary>
     static void StoreVideoData(SqliteConnection connection, string videoId, string title, string description,
                                string tags, string thumbnailUrl, ulong liveMaxConcurrentViewers, string duration,
                                long commentCount, long viewCount, long likeCount,
