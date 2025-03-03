@@ -28,7 +28,7 @@
  - [x] 研究YouTube API(試抓)
  - [x] 設計ERD
  - [ ] API資料處理
- - [ ] 設定排程美日抓取資料進資料庫
+ - [ ] 設定排程每日抓取資料進資料庫
  - [ ] 研究ASP.NET Core API
  - [ ] 建ASP.NET Core API
  - [ ] 研究Vue.js + ECharts
