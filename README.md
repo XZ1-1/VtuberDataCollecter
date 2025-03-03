@@ -4,8 +4,8 @@
 
 ## 使用技術 (Tech Stack)
 - 開發語言：C# (.NET 8)
-- 數據處理：SQLite(將改成MySQL)
-- 視覺化：預計用Web Dashboard
+- 資料庫：MySQL
+- 視覺化：預計用Vue.js + ECharts
 
 
 ## 安裝與使用方式 (Installation & Usage)
@@ -21,3 +21,16 @@
 
 ## Database Schema
 ![Database Schema](ERD1.1.png)
+
+
+
+## 開發進度
+ - [x] 研究YouTube API(試抓)
+ - [x] 設計ERD
+ - [ ] API資料處理
+ - [ ] 設定排程美日抓取資料進資料庫
+ - [ ] 研究ASP.NET Core API
+ - [ ] 建ASP.NET Core API
+ - [ ] 研究Vue.js + ECharts
+ - [ ] 串接Vue.js
+ - [ ] 部屬網站
